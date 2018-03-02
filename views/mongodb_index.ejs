@@ -1,0 +1,155 @@
+<html>
+    <head>
+        <title>
+            MongoDB Index
+        </title>
+        <script src="https://code.jquery.com/jquery.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap-theme.min.css">
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+        <style>
+            table, td  {
+                border: 1px solid grey;
+                border-collapse: collapse;
+                padding: 5px;
+            }
+
+            .odd {
+                background-color:#f1f1f1;    
+            }
+        </style>
+    </head>
+    <body ng-app="AppDB" ng-controller="dbCtrl">
+        <div style="margin-left: 50px; margin-top: 90px">
+            <div class="col-md-3" style="height: 220px"> 
+                <table>
+                    <tr ng-repeat="db in dbList">
+                        <td ng-if="$odd" class="odd" >
+                        {{ db.name }}</td>
+                        <td ng-if="$even">
+                        {{ db.name }}</td>
+                        <td ng-if="$odd" class="odd" >
+                        {{ db.sizeOnDisk }}</td>
+                        <td ng-if="$even">
+                        {{ db.sizeOnDisk }}</td>
+                        <td ng-if="$odd" class="odd" >
+                        <a href="" ng-click="getDatabase($index)">Access</a></td>
+                        <td ng-if="$even">
+                        <a href="" ng-click="getDatabase($index)">Access</a></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-3" style="height: 220px">
+                <table>
+                    <tr ng-repeat="c in collecList">
+                        <td ng-if="$odd" class="odd" >
+                        {{ c.name }}</td>
+                        <td ng-if="$even">
+                        {{ c.name }}</td>
+                        <td ng-if="$odd" class="odd" >
+                        <a href="" ng-click="getCollection($index)">Show Collection</a></td>
+                        <td ng-if="$even">
+                        <a href="" ng-click="getCollection($index)">Show Collection</a></td>
+                    </tr>
+                </table>
+			</div>
+			<div class="col-md-6" style="height: 220px">
+            </div>
+            <div class="col-md-9">
+                {{ collectionLength }}
+                <table>
+                    <th ng-repeat="name in columns">
+                        <a id="{{name}}" href="" ng-click="sortCollection($index)">{{ name }}</a>
+                    </th>
+                    <tr ng-repeat="c in collection">
+                        <td ng-repeat="name in columns">
+                            {{ c[name] }}
+                        </td>
+                    </tr>
+                </table>
+			</div>
+            <br><br>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var mongodb = angular.module('AppDB', []);
+            var socket  = io.connect();
+            var textRes = "<%= db_list %>".replace(/&#34;/g, '"');
+            var dbList  = JSON.parse(textRes);
+            var collec  = "";
+            
+            mongodb.factory('socket', function ($rootScope) {
+				return {
+					on: function (eventName, callback) {
+						socket.on(eventName, function () {  
+							var args = arguments;
+							$rootScope.$apply(function () {
+								callback.apply(socket, args);
+							});
+						});
+					},
+					emit: function (eventName, data, callback) {
+						socket.emit(eventName, data, function () {
+							var args = arguments;
+							$rootScope.$apply(function () {
+								if (callback) {
+									callback.apply(socket, args);
+								}
+							});
+						})
+					}
+				};
+            });
+            
+            mongodb.controller('dbCtrl', function($scope, socket) {
+                $scope.dbList = dbList.databases;
+
+                socket.on('getCollectionsResponse', function(data) {
+					$scope.collecList = data;
+                });
+
+                socket.on('getCollectionResponse', function(data) {
+                    console.log(data);
+                    $scope.collectionLength = "Total Rows: " + data.length;
+                    $scope.collection = data;	
+					$scope.columns = Object.keys(data[0]);
+                });
+                
+                $scope.getDatabase = function(i) {
+                    var name = dbList.databases[i].name;
+                    socket.emit("getCollections", name);
+                }
+
+                $scope.getCollection  = function(i) {
+                    var name = $scope.collecList[i].name;
+                    collec = name;
+                    socket.emit("getCollection", name);
+                }
+
+                $scope.sortCollection = function(i) {
+                    var order = 0;
+                    var varName = $scope.columns[i];
+                    var val = $("#" + varName).text();
+                    if(val.includes("↓")) {
+                        $("#" + varName).text(varName + "↑");
+                        order = -1;
+                    } else {
+                        $("#" + varName).text(varName + "↓");
+                        order = 1;
+                    }
+                    var data = { collec: collec, varName: varName, order: order };
+                    socket.emit("sortCollection", data);
+                }
+            });
+
+            jQuery(function($) {
+         
+            });
+
+
+		</script>
+	</body>
+</html>

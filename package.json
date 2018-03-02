@@ -1,0 +1,31 @@
+{
+  "name": "ubuntu_server",
+  "version": "0.2.5",
+  "description": "Ubuntu Server in NodeJS",
+  "engines": {
+    "node": "5.9.1"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "body-parser": "latest",
+    "cheerio": "latest",
+    "child_process": "latest",
+    "ejs": "latest",
+    "express": "latest",
+    "fs": "latest",
+    "iconv-lite": "latest",
+    "mongodb": "latest",
+    "node-gcm": "latest",
+    "request": "latest",
+    "socket.io": "latest",
+    "webtorrent": "latest"
+  },
+  "keywords": [
+    "node",
+    "heroku",
+    "express"
+  ]
+}

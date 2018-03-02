@@ -1,0 +1,182 @@
+<html>
+    <head>
+        <title>
+            Document Parsing
+        </title>
+        <script src="https://code.jquery.com/jquery.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap-theme.min.css">
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+		<style>
+			.loader {
+			  border: 8px solid #f3f3f3;
+			  border-radius: 50%;
+			  border-top: 8px solid #3498db;
+			  width: 80px;
+			  height: 80px;
+			  -webkit-animation: spin 2s linear infinite; /* Safari */
+			  animation: spin 2s linear infinite;
+			}
+
+			/* Safari */
+			@-webkit-keyframes spin {
+			  0% { -webkit-transform: rotate(0deg); }
+			  100% { -webkit-transform: rotate(360deg); }
+			}
+
+			@keyframes spin {
+			  0% { transform: rotate(0deg); }
+			  100% { transform: rotate(360deg); }
+			}
+		</style>
+    </head>
+    <body>
+        <div style="margin-left: 50px; margin-top: 90px">
+			<div class="col-md-3" id="loginDiv">
+				<div><p><b>Username:</b></p>
+				<input style="width: 100%; height: 25px; margin-left: 20px" type="text" id="username" value="48030656D">
+				</div>
+				<br><br>
+				<div><p><b>Password:</b></p>
+				<input style="width: 100%; height: 25px; margin-left: 20px" type="password" id="password" value="maradr_1">
+				</div>
+				<br>
+				<div>
+				<input style="float: right" type="button" value="Login" class="btn btn-success" id="loginBut"></input>
+				</div>
+			</div>
+			<div class="col-md-3" id="authDiv" style="height: 200px">
+				<p><b>Benvingut usuari:</b></p>
+				<p style="margin-left: 20px" id="hellop"></p>
+			</div>
+			<div class="col-md-7" id="loadingDiv">
+				<div style="margin-left: 40%; margin-top: 15%" class="loader"></div>
+			</div>
+			<div class="col-md-7" id="manualsDiv">
+				<b><p id="dispManuals"></p></b>
+				<div id="manuals" style="width: 100%; height: auto; min-height: 200px;">
+				</div>
+				<br><br>
+			</div>
+			<div class="col-md-12" id="downloadDiv" style="width: 90%; min-height: 200px">
+			</div>
+			<br><br>
+			<a id="download" href="" style="visibility: hidden"></a>
+        </div>
+		
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket;
+			var manuals;
+			
+			$("#loginBut").click(function() {
+				var username = $("#username").val();
+				var password = $("#password").val();
+				if((username != "") && (password != "")) {
+					socket.emit('login', username, password);
+					$("#buttonAdd").val("Loading...");
+				} else {
+					$("#torrentLink").attr("placeholder", "Insert an username!");
+					$("#torrentName").attr("placeholder", "Insert a password!");
+				}				
+			});
+
+            jQuery(function($) {
+				socket = io.connect();
+				$("#authDiv").hide();
+				$("#manualsDiv").hide();
+				$("#loadingDiv").hide();
+				$("#downloadDiv").hide();	
+				 
+				socket.on('loginResponse', function(name) {
+					$("#loginBut").val("Login");
+					$("#loginDiv").hide();
+					$("#authDiv").show();
+					$("#loadingDiv").show();
+					$("#hellop").text(name);
+					socket.emit('getManuals');
+				});
+				
+				socket.on('getManualsResponse', function(manList) {
+					manuals = manList;
+					$("#loadingDiv").hide();
+					$("#manualsDiv").show();
+					$("#dispManuals").text("Manuals Disponibles (Total: " + manuals.length + ")");
+					writeManuals();
+				});
+				
+				socket.on('downloadManualProcess', function(data) {
+					var id = data.id;
+					var percent = data.percent.toFixed(2);
+					$("#" + id).attr('aria-valuenow', percent).css('width', percent + '%');
+					$("#" + id).text(percent + "%");
+				});
+				
+				socket.on('downloadManualResponse', function(data) {
+					var id = data.id;
+					$("#" + id).attr('aria-valuenow', 0).css('width', '0%');
+					$("#l_" + id).text("Merging PDF's... ");
+					$("#" + id).text("0%");
+				});
+
+				socket.on('mergeManualProcess', function(data) {
+					var id = data.id;
+					var percent = data.percent.toFixed(2);
+					$("#" + id).attr('aria-valuenow', percent).css('width', percent + '%');
+					$("#" + id).text(percent + "%");
+				});				
+				
+				socket.on('mergeManualResponse', function(data) {
+					var id = data.id;
+					var file = data.file;
+					$("#" + id).attr('aria-valuenow', 100).css('width', '100%');
+					$("#l_" + id).text("Complete!");
+					$("#" + id).text("100%");
+					downloadByFile(file);
+					$("#downloadDiv").append("<input style='float: right' type='button' value='Done.' class='btn btn-success' onclick='okButton_ClickEvent()' ></input>" );
+				});
+            });
+			
+			function writeManuals() {
+				var txt = "<table>";
+				for(var i = 0; i < manuals.length; i++) {
+					var id = manuals[i].href.split("/id/")[1];
+					var href = "javascript:getManual('" + id + "')";
+					txt += "<tr>";
+					txt += "<td style='width: 85px'><a href=" + href + ">Download</a><td>";
+					txt += "<td style='width: 420px'>" + manuals[i].title + "</td>";
+					txt += "</tr>";						
+				}
+				$("#manuals").html(txt);
+				$(".progress").hide();
+			}
+
+			function getManual(id) {
+				var href = "https://campus.seastecnico.com/servicios/biblioteca-virtual/visualizar/tipo/1/id/" + id;
+				socket.emit('downloadManual', href);
+			
+				var html = "<p id='l_" + id + "'>Downloading...</p>";
+				html += "<div id='d_" + id + "' class='progress' style='height: 15px'>";
+				html += "<div id='" + id + "' class='progress-bar progress-bar-striped active' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width:0%'>";
+				html += "0%</div></div>";
+				$("#downloadDiv").html(html);
+				$("#manualsDiv").hide();
+				$("#downloadDiv").show();
+			}
+			
+			function downloadByFile(file) {
+				$("#download").attr("href", "/seasDownload?file=" + file);
+				$("#download")[0].click();	
+			}
+			
+			function okButton_ClickEvent() {
+				$("#manualsDiv").show();
+				$("#downloadDiv").hide();
+				writeManuals();
+			}
+        
+		</script>
+	</body>
+</html>
