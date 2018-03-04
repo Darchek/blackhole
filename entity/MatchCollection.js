@@ -6,6 +6,14 @@
 	function MatchCollection() {
 		this.matchCollection = [];
 	}
+
+	MatchCollection.prototype.Json2Object			= function(jsonCollection) {
+		for(var i = 0; i < jsonCollection.length; i++) {
+			var match = new Match().Json2Object(jsonCollection[i]);
+			this.add(match);
+		}
+		return this;
+	} 
 	
 	MatchCollection.prototype.getLength 			= function() {
 		return this.matchCollection.length;

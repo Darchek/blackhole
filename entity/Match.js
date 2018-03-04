@@ -23,6 +23,20 @@
 		this.awayGoals = 0;
 		this.channels = channels;
 	}
+
+	Match.prototype.Json2Object				= function(json) {
+		this.id = json.id;
+		this.league = json.league;
+		this.round = json.round;
+		this.date = json.date;
+		this.homeTeam = json.homeTeam;
+		this.awayTeam = json.awayTeam;
+		this.homeGoals = json.homeGoals;
+		this.awayGoals = json.awayGoals;
+		this.href = json.href;
+		this.channels = json.channels;
+		return this;
+	}
 	
 	Match.prototype.getMatchGoals = function(hGoals, aGoals) {
 		if(hGoals > 0)
